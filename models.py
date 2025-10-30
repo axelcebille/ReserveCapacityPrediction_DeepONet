@@ -7,41 +7,47 @@ from torch_geometric.nn import (
 )
 
 class GCN(nn.Module):
-    def __init__(self, in_dim: int, hidden_dim: int, out_dim: int = 2, dropout: float = 0.5):
+    def __init__(self, in_dim, hidden_dim, out_dim=2, dropout=0.5):
         super().__init__()
         self.conv1 = GCNConv(in_dim, hidden_dim)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
         self.conv2 = GCNConv(hidden_dim, hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
         self.conv3 = GCNConv(hidden_dim, hidden_dim)
-        self.dropout = float(dropout)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
+        self.dropout = dropout
+
         h2 = max(hidden_dim // 2, 8)
         h3 = max(hidden_dim // 4, 8)
         self.mlp = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, h2),         nn.ReLU(),
-            nn.Linear(h2, h3),                 nn.ReLU(),
+            nn.Linear(hidden_dim, h2), nn.ReLU(),
+            nn.Linear(h2, h3), nn.ReLU(),
             nn.Linear(h3, out_dim)
         )
 
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
-        # edge_attr: (E,1) -> edge_weight: (E,)
-        edge_weight = None
-        if getattr(data, "edge_attr", None) is not None:
-            edge_weight = data.edge_attr.view(-1)
+        edge_weight = getattr(data, "edge_attr", None)
+        if edge_weight is not None:
+            edge_weight = edge_weight.view(-1)
 
         x = self.conv1(x, edge_index, edge_weight=edge_weight)
-        x = F.relu(x); x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.bn1(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
 
         x = self.conv2(x, edge_index, edge_weight=edge_weight)
-        x = F.relu(x); x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.bn2(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
 
         x = self.conv3(x, edge_index, edge_weight=edge_weight)
+        x = self.bn3(x)
         x = F.relu(x)
 
         x = global_mean_pool(x, batch)
         return self.mlp(x)
-    
-
 
 class DeepONet(nn.Module):
     """
@@ -50,10 +56,10 @@ class DeepONet(nn.Module):
     - trunk_in : dimension of the evaluation location x
     - latent_dim: size of feature space where branch & trunk meet
     """
-    def __init__(self, branch_in, trunk_in, out_dim=2):
+    def __init__(self, branch_in, trunk_in, hidden_dim=64, out_dim=2):
         super().__init__()
         # Branch network
-        self.branch = GCN(in_dim=branch_in, hidden_dim=64, out_dim=out_dim)
+        self.branch = GCN(in_dim=branch_in, hidden_dim=hidden_dim, out_dim=out_dim)
 
         # Trunk network
         self.trunk = nn.Sequential(
@@ -72,5 +78,5 @@ class DeepONet(nn.Module):
         """
         b_feat = self.branch(u_samples)         # (batch, latent_dim)
         t_feat = self.trunk(x_loc)              # (batch, latent_dim)
-        out = b_feat * t_feat #+ self.bias
+        out = b_feat * t_feat + self.bias
         return out

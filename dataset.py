@@ -95,3 +95,27 @@ class MultiColDataset(Dataset):
         target = get_reserve_capacity_i(self.data, col, t)
 
         return graph, trunk_input, target, sample["in_flag"], sample["out_flag"]
+    
+    
+class MultiColSequenceDataset(Dataset):
+    def __init__(self, data: SimulationData):
+        self.data = data
+        self.column_types = list(data.features.keys())
+
+    def __len__(self):
+        return len(self.column_types)
+
+    def __getitem__(self, idx):
+        col = self.column_types[idx]
+        num_t = len(self.data.features[col]["reserve_capacities"])
+        graphs = [get_graph_timestep_i(self.data, col, t) for t in range(num_t)]
+        trunk_input = get_trunk_input_col(self.data, col)
+        targets = torch.stack([
+            get_reserve_capacity_i(self.data, col, t)
+            for t in range(num_t)
+        ])  # shape (T, 2)
+
+        in_flag = self.data.features[col]["In-distribution test"]
+        out_flag = self.data.features[col]["Out-of-distribution test"]
+
+        return graphs, trunk_input, targets, in_flag, out_flag    
