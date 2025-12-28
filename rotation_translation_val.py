@@ -4,8 +4,8 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
-from dataConfig import Config
-from data import SimulationData
+from ReserveCapacityPrediction_DeepONet.config.dataConfig import Config
+from ReserveCapacityPrediction_DeepONet.src.data import SimulationData
 import torch
 from torch.utils.data import Dataset
 from torch_geometric.loader import DataLoader  
@@ -13,8 +13,8 @@ from torch.utils.data import random_split
 
 from torch_geometric.data import Data, Batch
 
-from dataset import MultiColDataset
-from models import DeepONet
+from ReserveCapacityPrediction_DeepONet.src.dataset import MultiColDataset
+from ReserveCapacityPrediction_DeepONet.src.models import DeepONet
 
 from scipy.spatial.transform import Rotation as Rot
 
