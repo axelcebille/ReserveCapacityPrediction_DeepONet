@@ -30,30 +30,29 @@ The project is separated in **4 main parts**:
 _NB_: **RC** refers to *Residual Capacity* and **RM** refers to *Resisting Moment*.
 
 ```markdown
-```text
-├── config/ # Configuration files for models and training
-├── figures/ # Model analysis results
+├── config/                  # Configuration files for models and training
+├── figures/                 # Model analysis results
 ├── src/
-│ ├── data.py # Data loading and preprocessing
-│ ├── dataset.py # PyTorch dataset class returning graphs + trunk inputs
-│ ├── models.py # GNN and FNN branch + DeepONet model definitions
-│ └── utils.py # Ensemble of utility functions
+│ ├── data.py                # Data loading and preprocessing
+│ ├── dataset.py             # PyTorch dataset class returning graphs + trunk inputs
+│ ├── models.py              # GNN and FNN branch + DeepONet model definitions
+│ └── utils.py               # Ensemble of utility functions
 │
-├── mainRC.py # Training loop for residual capacity prediction
-├── mainRM.py # Training loop for resisting moment prediction
+├── mainRC.py                # Training loop for residual capacity prediction
+├── mainRM.py                # Training loop for resisting moment prediction
 │
-├── model_testRC.py # Evaluation scripts for residual capacity models
-├── model_testRM.py # Evaluation scripts for resisting moment models
+├── model_testRC.py          # Evaluation scripts for residual capacity models
+├── model_testRM.py          # Evaluation scripts for resisting moment models
 │
-├── latent_space_tsne.py # Latent space analysis using t-SNE (RC or RM)
-├── latent_space_pca.py # Latent space analysis and PC correlation using PCA (RC or RM)
+├── latent_space_tsne.py     # Latent space analysis using t-SNE (RC or RM)
+├── latent_space_pca.py      # Latent space analysis and PC correlation using PCA (RC or RM)
 │
-├── node_importance.py # Node importance analysis using gradients (RC or RM)
-├── SHAP_values_nodes.py # Node importance analysis using SHAP values (RC or RM)
+├── node_importance.py       # Node importance analysis using gradients (RC or RM)
+├── SHAP_values_nodes.py     # Node importance analysis using SHAP values (RC or RM)
 │
-├── data_processing.ipynb # Feature creation pipeline
+├── data_processing.ipynb    # Feature creation pipeline
 │
 ├── .gitignore
-├── README.md # This document
-└── requirements.txt # Python dependencies
+├── README.md                # This document
+└── requirements.txt         # Python dependencies
 
