@@ -246,7 +246,7 @@ shap_model = DeepONetSHAPWrapper(
     edge_index=ref_graph.edge_index,
     edge_attr=ref_graph.edge_attr,
     trunk_input=ref_trunk_input,
-    output_component=0,
+    output_component=0,  # e.g., pos. or neg. reserve capacity
     node_feature_shape=(70, 7)
 ).to(device)
 
@@ -286,7 +286,7 @@ for col_type in data.features.keys():
 
     importance_list = importance_by_col[col_type]
     make_importance_gif_dynamic_graph(data, importance_list, col_type,
-                                                gif_path=f"ReserveCapacityPrediction_DeepONet/figures/gifs_SHAP_importanceRM/RM_SHAP_importance_col{col_type}.gif",
+                                                gif_path=f"ReserveCapacityPrediction_DeepONet/figures/gifs_SHAP_importanceRM_pos/RM_SHAP_importance_col{col_type}.gif",
                                                 elev=30, azim=60)
 
 

@@ -179,11 +179,9 @@ def test_model_rc(data, model, device, target_normalize=False, features_normaliz
 # --- Model, optimizer, loss ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model1 = DeepONet(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
-model2 = DeepONet(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=1, dropout=0.2).to(device) # best model
 #model2 = DeepONet(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
-model3 = DeepONetFNN(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
+model2 = DeepONetFNN(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
 #model3 = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=1, dropout=0.2).to(device)
-model_list = [model1,model3]
 
 batch_size = 64
 transfo_flag = True  # whether to use transformed graphs for training
@@ -191,9 +189,12 @@ target_normalize = True
 features_normalize = True
 
 weights_name1 = "RC(no_transfo)_best_deeponet_model"
-weights_name2 = "RC(no_transfo)_best_deeponet_modelFNN"
-weights_name3 = "RC_best_deeponet_modelFNN"
-weight_names = [weights_name1, weights_name2]
+weights_name2 = "RC_best_deeponet_model"
+weights_name3 = "RC(no_transfo)_best_deeponet_modelFNN"
+weights_name4 = "RC_best_deeponet_modelFNN"
+
+model_list = [model1, model1, model2, model2]
+weight_names = [weights_name1, weights_name2, weights_name3, weights_name4]
 
 mape_losses = []
 mape_losses_transfo = []

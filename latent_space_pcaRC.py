@@ -14,14 +14,31 @@ from src.data import SimulationData, SimulationDataLoader
 from src.dataset import MultiColDataset
 from src.dataset import compute_normalization_stats, compute_graph_norm_stats
 from src.utils import compute_mean_target, compute_std_target
-from src.models import DeepONet
+from src.models import DeepONet, DeepONetFNN
 
 # === 1. Load trained model ===
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model for residual capacity prediction
+
+# RC model with transfo. and GCN setup
 model = DeepONet(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
-# Load the weights
 state_dict = torch.load("model_weights/RC_best_deeponet_model.pth", map_location="cpu")
+file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/residual_capacity"
+
+# RC model without transfo. and GCN setup
+#model = DeepONet(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
+#state_dict = torch.load("model_weights/RC(no_transfo)_best_deeponet_model.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/residual_capacity(no_transfo)"
+
+# RC model with transfo. and FNN setup
+#model = DeepONetFNN(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
+#state_dict = torch.load("model_weights/RC_best_deeponet_modelFNN.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/residual_capacityFNN"
+
+# RC model without transfo. and FNN setup
+#model = DeepONetFNN(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=2, dropout=0.2).to(device)
+#state_dict = torch.load("model_weights/RC(no_transfo)_best_deeponet_modelFNN.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/residual_capacity(no_transfo)FNN"
+
 model.load_state_dict(state_dict)
 model.eval()
 print("✅ Model loaded and set to evaluation mode.")
@@ -31,107 +48,21 @@ config = Config()
 data = SimulationDataLoader()
 data.load_features('ReserveCapacityPrediction_DeepONet/data/features.pkl')
 
-###################################
-# INPUTS FOR PCA ANALYSIS HERE #
+def pca_analysisRC(data, model, device, corr_type, network_type, file_path):
 
-# Correlation PCA calculation
-corr_type = "cummulative_displacement" #"residual_capacity", "max_curvature", "cummulative_displacement"
-# Trunk or Branch Analysis
-network_type = "trunk"  #"branch" or "trunk"
+    print(f"Performing Residual Capacity PCA analysis on {network_type} network correlated with {corr_type}.")
+    # Compute normalization stats from training data
+    trunk_mean, trunk_std = compute_normalization_stats(data)
+    graph_mean, graph_std = compute_graph_norm_stats(data)
 
-print(f"Performing Residual Capacity PCA analysis on {network_type} network correlated with {corr_type}.")
-####################################
-
-# Compute normalization stats from training data
-trunk_mean, trunk_std = compute_normalization_stats(data)
-graph_mean, graph_std = compute_graph_norm_stats(data)
-
-dataset = MultiColDataset(data,trunk_mean, trunk_std, graph_mean, graph_std)
-trunk_mean, trunk_std = trunk_mean.to(device), trunk_std.to(device)
-graph_mean, graph_std = graph_mean.to(device), graph_std.to(device)
-
-# Separate by flags
-test_set = "in_flag" # "out_flag"
-train_val_samples, test_samples = [], []
-for i, sample in enumerate(dataset.samples):
-    if sample[test_set]:
-        test_samples.append(i)
-    else:
-        train_val_samples.append(i)
-
-train_size = int(0.99 * len(train_val_samples))
-val_size = len(train_val_samples) - train_size
-
-# Split dataset
-train_samples = torch.utils.data.Subset(train_val_samples, range(train_size))
-val_samples = torch.utils.data.Subset(train_val_samples, range(train_size, train_size + val_size))
-
-from torch.utils.data import Subset
-train_dataset = Subset(dataset, train_samples)
-
-target_mean = compute_mean_target(train_dataset)
-target_std = compute_std_target(train_dataset,target_mean)
-target_mean, target_std = target_mean.to(device), target_std.to(device)
-
-loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
-
-# === 3. Extract branch latent features ===
-branch_features = []
-trunk_features = []
-col_names = []
-rc_list = []
-lsr_list = []
-max_curv = []
-L_k = 8000
-
-with torch.no_grad():
-    for graph, trunk_input, target, in_flag, out_flag, col in loader:
-        graph = graph.to(device)
-        trunk_input = trunk_input.to(device)
-
-        branch_out = model.branch(graph)  # latent representation
-        branch_latent = branch_out.reshape(branch_out.shape[0], -1)  # shape: (batch, out_dim*latent_dim)
-        branch_features.append(branch_latent.squeeze(0).cpu())
-
-        trunk_out = model.trunk(trunk_input)
-        trunk_latent = trunk_out.reshape(trunk_out.shape[0], -1)  # shape: (batch, out_dim*latent_dim)
-        trunk_features.append(trunk_latent.squeeze(0).cpu())
-
-        col_names.append(col)  # or out_flag if you prefer
-        rc = target[0, 0].item()
-        rc_list.append(rc)
-
-        graph.x = graph.x * graph_std + graph_mean  # Denormalize graph features
-        max_curv.append(graph.x[:, 6].max().item())
-
-        d, t_w, b_f, t_f = trunk_input[0,0].item(), trunk_input[0,1].item(), trunk_input[0,2].item(), trunk_input[0,3].item()
-        lsr = compute_local_slenderness_ratio(L_k, d, t_w, b_f, t_f)
-        lsr_list.append(lsr)
-
-branch_features = torch.stack(branch_features)
-trunk_features = torch.stack(trunk_features)
-
-if network_type == "branch":
-    features = branch_features
-elif network_type == "trunk":
-    features = trunk_features
-
-rc_list = np.array(rc_list)
-max_curv = np.array(max_curv)/1e-5
-
-if corr_type == "residual_capacity":
-    corr_metric = rc_list
-
-elif corr_type == "max_curvature":
-    corr_metric = max_curv
-
-elif corr_type == "cummulative_displacement":
-    dataset2 = MultiColDataset(data,model="rm")
+    dataset = MultiColDataset(data,trunk_mean, trunk_std, graph_mean, graph_std)
+    trunk_mean, trunk_std = trunk_mean.to(device), trunk_std.to(device)
+    graph_mean, graph_std = graph_mean.to(device), graph_std.to(device)
 
     # Separate by flags
     test_set = "in_flag" # "out_flag"
     train_val_samples, test_samples = [], []
-    for i, sample in enumerate(dataset2.samples):
+    for i, sample in enumerate(dataset.samples):
         if sample[test_set]:
             test_samples.append(i)
         else:
@@ -139,77 +70,180 @@ elif corr_type == "cummulative_displacement":
 
     train_size = int(0.99 * len(train_val_samples))
     val_size = len(train_val_samples) - train_size
+
     # Split dataset
     train_samples = torch.utils.data.Subset(train_val_samples, range(train_size))
     val_samples = torch.utils.data.Subset(train_val_samples, range(train_size, train_size + val_size))
 
     from torch.utils.data import Subset
-    train_dataset = Subset(dataset2, train_samples)
-    loader2 = DataLoader(train_dataset, batch_size=1, shuffle=False)
+    train_dataset = Subset(dataset, train_samples)
 
-    cummulative_disp = []
-    prev_col = None
-    for graph, trunk_input, target, in_flag, out_flag, col in loader2:
-        d, t_w, b_f, t_f, eps = trunk_input[0,0].item(), trunk_input[0,1].item(), trunk_input[0,2].item(), trunk_input[0,3].item(), trunk_input[0,4].item()
-        disp = eps * 8000
+    target_mean = compute_mean_target(train_dataset)
+    target_std = compute_std_target(train_dataset,target_mean)
+    target_mean, target_std = target_mean.to(device), target_std.to(device)
 
-        if col == prev_col:
-            cummulative_disp.append(cummulative_disp[-1] + abs(disp))
-        else:
-            prev_col = col
-            cummulative_disp.append(abs(disp))
+    loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
 
-    corr_metric = np.array(cummulative_disp)
+    # === 3. Extract branch latent features ===
+    branch_features = []
+    trunk_features = []
+    col_names = []
+    rc_list = []
+    lsr_list = []
+    max_curv = []
+    L_k = 8000
+
+    with torch.no_grad():
+        for graph, trunk_input, target, in_flag, out_flag, col in loader:
+            graph = graph.to(device)
+            trunk_input = trunk_input.to(device)
+
+            branch_out = model.branch(graph)  # latent representation
+            branch_latent = branch_out.reshape(branch_out.shape[0], -1)  # shape: (batch, out_dim*latent_dim)
+            branch_features.append(branch_latent.squeeze(0).cpu())
+
+            trunk_out = model.trunk(trunk_input)
+            trunk_latent = trunk_out.reshape(trunk_out.shape[0], -1)  # shape: (batch, out_dim*latent_dim)
+            trunk_features.append(trunk_latent.squeeze(0).cpu())
+
+            col_names.append(col)  # or out_flag if you prefer
+            rc = target[0, 0].item()
+            rc_list.append(rc)
+
+            graph.x = graph.x * graph_std + graph_mean  # Denormalize graph features
+            max_curv.append(graph.x[:, 6].max().item())
+
+            d, t_w, b_f, t_f = trunk_input[0,0].item(), trunk_input[0,1].item(), trunk_input[0,2].item(), trunk_input[0,3].item()
+            lsr = compute_local_slenderness_ratio(L_k, d, t_w, b_f, t_f)
+            lsr_list.append(lsr)
+
+    branch_features = torch.stack(branch_features)
+    trunk_features = torch.stack(trunk_features)
+
+    if network_type == "branch":
+        features = branch_features
+    elif network_type == "trunk":
+        features = trunk_features
+
+    rc_list = np.array(rc_list)
+    max_curv = np.array(max_curv)/1e-5
+
+    if corr_type == "residual_capacity":
+        corr_metric = rc_list
+
+    elif corr_type == "max_curvature":
+        corr_metric = max_curv
+
+    elif corr_type == "cummulative_displacement":
+        dataset2 = MultiColDataset(data,model="rm")
+
+        # Separate by flags
+        test_set = "in_flag" # "out_flag"
+        train_val_samples, test_samples = [], []
+        for i, sample in enumerate(dataset2.samples):
+            if sample[test_set]:
+                test_samples.append(i)
+            else:
+                train_val_samples.append(i)
+
+        train_size = int(0.99 * len(train_val_samples))
+        val_size = len(train_val_samples) - train_size
+        # Split dataset
+        train_samples = torch.utils.data.Subset(train_val_samples, range(train_size))
+        val_samples = torch.utils.data.Subset(train_val_samples, range(train_size, train_size + val_size))
+
+        from torch.utils.data import Subset
+        train_dataset = Subset(dataset2, train_samples)
+        loader2 = DataLoader(train_dataset, batch_size=1, shuffle=False)
+
+        cummulative_disp = []
+        prev_col = None
+        for graph, trunk_input, target, in_flag, out_flag, col in loader2:
+            d, t_w, b_f, t_f, eps = trunk_input[0,0].item(), trunk_input[0,1].item(), trunk_input[0,2].item(), trunk_input[0,3].item(), trunk_input[0,4].item()
+            disp = eps * 8000
+
+            if col == prev_col:
+                cummulative_disp.append(cummulative_disp[-1] + abs(disp))
+            else:
+                prev_col = col
+                cummulative_disp.append(abs(disp))
+
+        corr_metric = np.array(cummulative_disp)
 
 
-unique_cols = sorted(list(set(col_names)))
-col_to_idx = {col: i for i, col in enumerate(unique_cols)}
-color_indices = np.array([col_to_idx[c] for c in col_names])
+    unique_cols = sorted(list(set(col_names)))
+    col_to_idx = {col: i for i, col in enumerate(unique_cols)}
+    color_indices = np.array([col_to_idx[c] for c in col_names])
 
-# === Create figures folder ===
-#os.makedirs("figures/pca_analysis", exist_ok=True)
+    # === Create figures folder ===
+    #os.makedirs("figures/pca_analysis", exist_ok=True)
 
-# === Compute PCA (branch or trunk) ===
-pca = PCA(n_components=2)
-emb_pca = pca.fit_transform(features)
+    # === Compute PCA (branch or trunk) ===
+    pca = PCA(n_components=2)
+    emb_pca = pca.fit_transform(features)
 
-plt.figure()
-sc = plt.scatter(emb_pca[:, 0], emb_pca[:, 1], c=corr_metric, cmap="viridis", alpha=0.5)
-plt.xlabel("PC1")
-plt.ylabel("PC2")
-plt.title(f"{network_type} Network Latent Space (PCA)")
+    plt.figure()
+    sc = plt.scatter(emb_pca[:, 0], emb_pca[:, 1], c=corr_metric, cmap="viridis", alpha=0.5)
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.title(f"{network_type} Network Latent Space (PCA)")
 
-# Add color scale
-cbar = plt.colorbar(sc)
-cbar.set_label(f"{corr_type}", rotation=270, labelpad=15)
+    # Add color scale
+    cbar = plt.colorbar(sc)
+    cbar.set_label(f"{corr_type}", rotation=270, labelpad=15)
 
-plt.savefig(f"ReserveCapacityPrediction_DeepONet/figures/pca_analysis/residual_capacity/pca_latent_space_{network_type}_{corr_type}.png", dpi=300, bbox_inches="tight")
-plt.close()
+    plt.savefig(f"{file_path}/pca_latent_space_{network_type}_{corr_type}.png", dpi=300, bbox_inches="tight")
+    plt.close()
 
-# --- Compute correlations with target ---
-corrs = [np.corrcoef(emb_pca[:, i], corr_metric)[0, 1] for i in range(emb_pca.shape[1])]
+    # --- Compute correlations with target ---
+    corrs = [np.corrcoef(emb_pca[:, i], corr_metric)[0, 1] for i in range(emb_pca.shape[1])]
 
-# --- Make a readable summary ---
-corr_df = pd.DataFrame({
-    'Principal Component': np.arange(1, len(corrs) + 1),
-    f'Correlation with {corr_type}': corrs,
-    'Explained Variance Ratio': pca.explained_variance_ratio_
-})
+    # --- Make a readable summary ---
+    # Build dataframe
+    corr_df = pd.DataFrame({
+        'PC': np.arange(1, len(corrs) + 1),
+        'corr': corrs,
+        'var': pca.explained_variance_ratio_
+    })
 
-# Sort by absolute correlation (optional)
-corr_df = corr_df.reindex(corr_df[f'Correlation with {corr_type}'].abs().sort_values(ascending=False).index)
+    # Sort by absolute correlation
+    corr_df = corr_df.reindex(corr_df['corr'].abs().sort_values(ascending=False).index)
 
-print(corr_df.head(10))
+    # Plot
+    plt.figure(figsize=(9, 4))
 
-plt.figure(figsize=(8,4))
-plt.bar(range(1, len(corrs)+1), corrs)
-plt.xlabel("Principal Component")
-plt.ylabel(f"Correlation with {corr_type}")
-plt.title("Correlation of PCA Components with Target")
-plt.axhline(0, color='k', linestyle='--', linewidth=0.8)
+    colors = np.where(corr_df['corr'] >= 0, 'steelblue', 'indianred')
 
-plt.savefig(f"ReserveCapacityPrediction_DeepONet/figures/pca_analysis/residual_capacity/pca_correlation_{network_type}_{corr_type}.png", dpi=300, bbox_inches="tight")
-plt.close()
+    plt.bar(
+        corr_df['PC'],
+        corr_df['corr'],
+        color=colors,
+        width=0.8
+    )
+
+    # Fixed scale for comparison
+    plt.ylim(-1, 1)
+
+    plt.axhline(0, linewidth=0.8)
+    plt.grid(axis='y', alpha=0.3)
+
+    plt.xlabel("Principal Component")
+    plt.ylabel(f"Correlation with {corr_type}")
+    plt.title(f"Correlation of {corr_type} with PCA Components for {network_type} model")
+
+    plt.tight_layout()
+    plt.show()
+
+    plt.savefig(f"{file_path}/pca_correlation_{network_type}_{corr_type}.png", dpi=300, bbox_inches="tight")
+    plt.close()
 
 
-print("✅ Figures saved in ./figures/pca_analysis/ folder.")
+    print("✅ Figures saved in ./figures/pca_analysis/ folder.")
+
+# === RUN PCA ANALYSIS FOR RESIDUAL CAPACITY MODEL ===
+corr_types = ["cummulative_displacement", "residual_capacity", "max_curvature"]
+network_types = ["branch", "trunk"]
+
+for corr_type in corr_types:
+    for network_type in network_types:
+        pca_analysisRC(data, model, device, corr_type, network_type, file_path)
