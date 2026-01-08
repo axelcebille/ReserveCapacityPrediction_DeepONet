@@ -281,13 +281,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model1 = DeepONet(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=1, dropout=0.2).to(device)
 model2 = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=264, out_dim=1, dropout=0.2).to(device) # best model
 model3 = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=1, dropout=0.2).to(device)
-model_list = [model1,model2,model3]
+#model_list = [model1,model2,model3]
+model_list = [model2]
 
 batch_sizes = [300,400,500]
 # --- Training loop ---
 batch_size = 64
 n_epochs = 1000
-transfo_flag = False  # whether to use transformed graphs for training
+transfo_flag = True  # whether to use transformed graphs for training
 # early stop params
 patience = 30
 target_normalize = True

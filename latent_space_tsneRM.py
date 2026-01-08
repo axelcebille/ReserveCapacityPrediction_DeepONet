@@ -23,7 +23,15 @@ def get_latent(out, out_dim, latent_dim):                        # (batch, out_d
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=264, out_dim=1, dropout=0.2).to(device)
 # 2. Load the weights
-state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+
+# FNN branch model, with affine transfo invariance, resisting moment
+#state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/tsne_analysis/resisting_moment"
+
+# FNN branch model, with affine transfo invariance, resisting moment
+state_dict = torch.load("model_weights/RM_(translation_only)best_deeponet_modelFNN.pth", map_location="cpu")
+file_path = "ReserveCapacityPrediction_DeepONet/figures/tsne_analysis/resisting_moment(translation_only)"
+
 model.load_state_dict(state_dict)
 model.eval()
 print("✅ Model loaded and set to evaluation mode.")
@@ -33,7 +41,6 @@ config = Config()
 data = SimulationDataLoader()
 data.load_features('ReserveCapacityPrediction_DeepONet/data/features.pkl')
 
-file_path = "ReserveCapacityPrediction_DeepONet/figures/tsne_analysis/resisting_moment"
 
 def tsne_analysisRM(data, model, device, var, network_type, file_path):
     print(f"Performing Resisting Moment t-sne analysis on {network_type} network colored-mapping for {var}.")
@@ -179,7 +186,7 @@ def tsne_analysisRM(data, model, device, var, network_type, file_path):
 
 # === RUN T-SNE ANALYSIS FOR RESISTING MOMENT MODEL ===
 # "residual_capacity", "local_slenderness_ratio"
-variables = ["local_slenderness_ratio_web", "local_slenderness_ratio_flange"]
+variables = ["local_slenderness_ratio_web", "local_slenderness_ratio_flange", "residual_capacity", "local_slenderness_ratio"]
 network_types = ["branch", "trunk"]
 
 for var in variables:

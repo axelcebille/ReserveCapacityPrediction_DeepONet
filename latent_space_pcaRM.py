@@ -19,11 +19,17 @@ from src.models import DeepONet, DeepONetFNN
 # === 1. Load trained model ===
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # model for residual capacity prediction
-#model = DeepONet(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=1, dropout=0.2).to(device)
 model = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=264, out_dim=1, dropout=0.2).to(device)
 # Load the weights
-state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
-#state_dict = torch.load("model_weights/RM_best_deeponet_model.pth", map_location="cpu")
+
+# FNN branch model, with affine transfo invariance, resisting moment
+#state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment"
+
+# FNN branch model, with affine transfo invariance, resisting moment
+state_dict = torch.load("model_weights/RM_(translation_only)best_deeponet_modelFNN.pth", map_location="cpu")
+file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment(translation_only)"
+
 model.load_state_dict(state_dict)
 model.eval()
 print("✅ Model loaded and set to evaluation mode.")
@@ -32,8 +38,6 @@ config = Config()
 #data = SimulationData(config)
 data = SimulationDataLoader()
 data.load_features('ReserveCapacityPrediction_DeepONet/data/features.pkl')
-
-file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment"
 
 def pca_analysisRM(data, model, device, corr_type, network_type, file_path):
     print(f"Performing Resisting Moment PCA analysis on {network_type} network correlated with {corr_type}.")
