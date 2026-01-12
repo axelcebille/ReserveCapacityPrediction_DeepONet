@@ -162,7 +162,7 @@ def get_resisting_moment_i(data:SimulationData , column_type:str, i:int):
 
 class MultiColDataset(Dataset):
     def __init__(self, data: SimulationData, trunk_mean=None, trunk_std=None,
-                 graph_mean=None, graph_std=None, model="rc"):
+                 graph_mean=None, graph_std=None, model="rc", mom_norm=True):
         self.samples = []
         column_types = list(data.features.keys())
         for col in column_types:
@@ -182,6 +182,8 @@ class MultiColDataset(Dataset):
         self.trunk_std = trunk_std
         self.graph_mean = graph_mean
         self.graph_std = graph_std
+
+        self.mom_norm = mom_norm
 
     def __len__(self):
         return len(self.samples)
@@ -204,8 +206,10 @@ class MultiColDataset(Dataset):
             trunk_input = trunk_input_rm
             d, t_w, b_f, t_f = trunk_input[0].item(), trunk_input[1].item(), trunk_input[2].item(), trunk_input[3].item()
             M_el = compute_elastic_moment(d, t_w, b_f, t_f,fy=355)
-            #target = target_moment/M_el
-            target = target_moment
+            if self.mom_norm:
+                target = target_moment/M_el
+            else:
+                target = target_moment
         else:
             raise ValueError(f"Unknown model type: {self.model}")
 

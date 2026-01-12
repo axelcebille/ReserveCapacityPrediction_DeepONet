@@ -24,7 +24,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #model = DeepONet(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=128, out_dim=1, dropout=0.2).to(device)
 model = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, latent_dim=264, out_dim=1, dropout=0.2).to(device)
 # 2. Load the weights
-state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+#state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+state_dict = torch.load("model_weights/RM_(translation_only+mom_norm)best_deeponet_modelFNN.pth", map_location="cpu")
+#state_dict = torch.load("model_weights/RM_(translation_only)best_deeponet_modelFNN.pth", map_location="cpu")
 model.load_state_dict(state_dict)
 model.eval()
 print("✅ Model loaded and set to evaluation mode.")
@@ -34,6 +36,7 @@ print("✅ Model loaded and set to evaluation mode.")
 data = SimulationDataLoader()
 data.load_features('ReserveCapacityPrediction_DeepONet/data/features.pkl')
 
+moments = compute_moment_by_column(data)
 
 # Compute normalization stats from training data
 trunk_mean, trunk_std = compute_normalization_stats(data, model="rm")
@@ -72,6 +75,7 @@ loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
 
 
 col_obj = "W16X100"
+elastic_moment = elastic_moments[col_obj]
 pred_col = []
 target_col = []
 deformations = []
@@ -92,9 +96,9 @@ with torch.no_grad():
 deformations = [t.detach().cpu().numpy() for t in deformations]
 deformations = np.array(deformations)
 pred_col = [t.detach().cpu().numpy() for t in pred_col]
-pred_col = np.array(pred_col)
+pred_col = np.array(pred_col) * elastic_moment
 target_col = [t.detach().cpu().numpy() for t in target_col]
-target_col = np.array(target_col)
+target_col = np.array(target_col) * elastic_moment
 
 
 plt.figure(figsize=(20,8))
@@ -108,6 +112,6 @@ plt.grid(True)
 plt.show()
 
 
-plt.savefig(f"ReserveCapacityPrediction_DeepONet/figures/moment_def_comparisonFNN.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"ReserveCapacityPrediction_DeepONet/figures/moment_def_comparisonFNNt2.png", dpi=300, bbox_inches="tight")
 plt.close()
 print("✅ Moment–Deflection plot saved.")

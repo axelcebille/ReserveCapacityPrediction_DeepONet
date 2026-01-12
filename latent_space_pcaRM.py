@@ -27,8 +27,12 @@ model = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=26
 #file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment"
 
 # FNN branch model, with affine transfo invariance, resisting moment
-state_dict = torch.load("model_weights/RM_(translation_only)best_deeponet_modelFNN.pth", map_location="cpu")
-file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment(translation_only)"
+#state_dict = torch.load("model_weights/RM_(translation_only)best_deeponet_modelFNN.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment(translation_only)"
+
+# FNN branch model, with affine transfo invariance + elastic moment normalisation
+state_dict = torch.load("model_weights/RM_(translation_only+mom_norm)best_deeponet_modelFNN.pth", map_location="cpu")
+file_path = "ReserveCapacityPrediction_DeepONet/figures/pca_analysis/resisting_moment(translation+moment_norm)"
 
 model.load_state_dict(state_dict)
 model.eval()

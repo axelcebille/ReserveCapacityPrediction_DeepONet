@@ -125,7 +125,6 @@ device = torch.device("cpu")
 #                 latent_dim=128, out_dim=2, dropout=0.2).to(device)
 model = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, 
                     latent_dim=264, out_dim=1, dropout=0.2).to(device)
-#state_dict = torch.load("model_weights/RC_best_deeponet_model.pth", map_location="cpu")
 state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
 model.load_state_dict(state_dict)
 model.eval()

@@ -329,7 +329,7 @@ def random_Rt():
     t = torch.randn(3) * 0.1  # small random translation
     return R, t
 
-def transform_graph(graph, R, t, rotation=True): # put roation to False for translation only
+def transform_graph(graph, R, t, rotation=False): # put roation to False for translation only
     coords = graph.x[:, :3]
     dev = graph.x[:, 3:6]
     curv = graph.x[:, 6:]
