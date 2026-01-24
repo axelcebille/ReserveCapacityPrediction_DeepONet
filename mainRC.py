@@ -252,7 +252,6 @@ model2 = DeepONetFNN(branch_in=7, trunk_in=4, hidden_dim=264,hidden_dim_trunk=26
 model3 = DeepONet(branch_in=7, trunk_in=13, hidden_dim=1000,hidden_dim_trunk=500, latent_dim=264, out_dim=1, dropout=0.4).to(device)
 model_list = [model2]
 
-batch_sizes = [300,400,500]
 # --- Training loop ---
 batch_size = 64
 n_epochs = 1000
@@ -261,7 +260,7 @@ transfo_flag = True  # whether to use transformed graphs for training
 patience = 40
 target_normalize = True
 features_normalize = True
-lambda_reg = 0.0001 # for now not used 
+lambda_reg = 0.0001 # from custom loss, not used anymore
 
 print("Predicting Reserve Capacity...")
 mape_losses = []

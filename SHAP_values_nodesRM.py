@@ -125,7 +125,11 @@ device = torch.device("cpu")
 #                 latent_dim=128, out_dim=2, dropout=0.2).to(device)
 model = DeepONetFNN(branch_in=7, trunk_in=13, hidden_dim=264,hidden_dim_trunk=264, 
                     latent_dim=264, out_dim=1, dropout=0.2).to(device)
-state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+#state_dict = torch.load("model_weights/RM_best_deeponet_modelFNN.pth", map_location="cpu")
+#file_path = "ReserveCapacityPrediction_DeepONet/figures/gifs_SHAP_importanceRM_pos"
+
+state_dict = torch.load("model_weights/RM_(translation_only+mom_norm)best_deeponet_modelFNN.pth", map_location="cpu")
+file_path = "ReserveCapacityPrediction_DeepONet/figures/gifs_SHAP_importanceRM_final_model"
 model.load_state_dict(state_dict)
 model.eval()
 print("✅ Model loaded and set to evaluation mode.")
@@ -234,8 +238,6 @@ background = torch.cat(background_x, dim=0)  # (B, N*F)
 importance_by_col = defaultdict(list)
 shap_values_by_col = defaultdict(list)
 
-#col_type = "W18X71"
-
 ref_graph, ref_trunk_input, _, _, _, _ = next(iter(loader))
 ref_graph = ref_graph.to(device)
 ref_trunk_input = ref_trunk_input.to(device)
@@ -251,6 +253,7 @@ shap_model = DeepONetSHAPWrapper(
 
 explainer = shap.GradientExplainer(shap_model, background.to(device))
 
+col_wanted = "W16X36"
 for col_type in data.features.keys():
     print(f"Computing SHAP values for column type: {col_type}")
 
@@ -285,7 +288,7 @@ for col_type in data.features.keys():
 
     importance_list = importance_by_col[col_type]
     make_importance_gif_dynamic_graph(data, importance_list, col_type,
-                                                gif_path=f"ReserveCapacityPrediction_DeepONet/figures/gifs_SHAP_importanceRM_pos/RM_SHAP_importance_col{col_type}.gif",
+                                                gif_path=f"{file_path}/RM_SHAP_importance_col{col_type}.gif",
                                                 elev=30, azim=60)
 
 
