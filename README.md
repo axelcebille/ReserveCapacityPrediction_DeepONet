@@ -33,8 +33,8 @@ _NB_: **RC** refers to *Residual Capacity* and **RM** refers to *Resisting Momen
 ├── config/                                  # Configuration files for models and training
 ├── figures/                                 # Model analysis results
 │ ├── gifs_gradient_importance               # plots of gradient based nodes importance (RC or RM)
-│ ├── gifs_SHAP_importanceRC_pos             # plots of SHAP values based nodes importance (on positive redidual capacity)
-│ ├── gifs_SHAP_importanceRC_neg             # plots of SHAP values based nodes importance (on negative residual capacity)
+│ ├── gifs_SHAP_importanceRC_pos             # plots of SHAP values based nodes importance (on upper bound redidual capacity)
+│ ├── gifs_SHAP_importanceRC_neg             # plots of SHAP values based nodes importance (on lower bound residual capacity)
 │ ├── gifs_SHAP_importanceRM                 # plots of SHAP values based nodes importance for RM model
 │ ├── pca_analysis             # PCA plots with correlation plots (each file inside represents a different model)
 │ ├── tsne_analysis            # T-SNE analysis plots (each file inside represents a different model)
